@@ -1,0 +1,55 @@
+.node {
+  background-color: var(--node-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease-in-out;
+  pointer-events: auto;
+}
+
+.node:hover {
+  box-shadow: 0 10px 20px -1px rgba(0,0,0,0.4), 0 5px 10px -1px rgba(0,0,0,0.3);
+}
+
+.node-header {
+  background-color: var(--node-header-bg);
+  padding: 8px 12px;
+  cursor: grab;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  user-select: none;
+}
+
+.node-header-title {
+  font-weight: bold;
+  font-size: 0.9em;
+  color: var(--text-secondary);
+}
+
+.node-header-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.2em;
+  padding: 0 5px;
+}
+
+.node-header-close:hover {
+  color: var(--accent-primary);
+}
+
+.node-body {
+  flex-grow: 1;
+  overflow: hidden; /* Important for iframe/content within */
+}
+
+/* Placeholder for resize handle visual */
+.resize-handle {
+  /* styles are inline for now for simplicity */
+}

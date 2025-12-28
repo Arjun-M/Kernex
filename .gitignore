@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# User Data
+data/*.db
+data/*.json
+data/uploads/*
+!data/.keep

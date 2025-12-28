@@ -1,0 +1,223 @@
+.short-urls-app {
+  padding: 24px;
+  max-width: 800px;
+  margin: 0 auto;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.title-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.title-section h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.add-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--accent-primary);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.add-form {
+  background-color: var(--bg-secondary);
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.form-group input {
+  padding: 8px 12px;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+
+.submit-btn {
+  background-color: #10b981;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  height: 35px;
+}
+
+.url-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.url-card {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  gap: 20px;
+  transition: opacity 0.2s;
+}
+
+.url-card.disabled {
+  opacity: 0.6;
+}
+
+.url-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.url-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.short-id {
+  font-weight: 700;
+  font-family: monospace;
+  font-size: 16px;
+  color: var(--accent-primary);
+}
+
+.url-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.url-actions button, .url-actions a {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+}
+
+.url-actions button:hover, .url-actions a:hover {
+  color: var(--text-primary);
+}
+
+.target-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.target-text:hover {
+  text-decoration: underline;
+}
+
+.edit-box {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-box input {
+  flex: 1;
+  padding: 4px 8px;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--accent-primary);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.edit-box button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.url-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 100px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.hit-count b {
+  color: var(--text-primary);
+}
+
+.card-controls {
+  display: flex;
+  gap: 8px;
+  border-left: 1px solid var(--border-color);
+  padding-left: 16px;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.toggle-btn.on { color: #10b981; }
+.toggle-btn.off { color: var(--text-secondary); }
+
+.delete-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.delete-btn:hover { color: #ef4444; }
+
+.loading, .empty, .error-msg {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.error-msg { color: #ef4444; }

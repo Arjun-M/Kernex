@@ -1,0 +1,81 @@
+.top-bar {
+  height: 40px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  user-select: none;
+  position: relative;
+  z-index: 1500;
+}
+
+.top-bar-left, .top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.top-bar-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.workspace-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.command-btn {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  min-width: 200px;
+  text-align: left;
+}
+
+.command-btn:hover {
+  background-color: var(--bg-primary);
+  border-color: var(--accent-primary);
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-tertiary);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.zoom-controls button {
+  padding: 4px 8px;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.zoom-controls button:hover {
+  background-color: var(--bg-primary);
+}
+
+.zoom-display {
+  font-size: 0.8rem;
+  padding: 0 6px;
+  color: var(--text-secondary);
+  min-width: 40px;
+  text-align: center;
+}
+
+.status-indicator {
+  font-size: 0.8rem;
+}
+
+.status-indicator.online {
+  color: #4caf50;
+}

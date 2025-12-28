@@ -1,0 +1,433 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { Copy, RefreshCw, AlertCircle, Check, Lock, Key, Shield, FileText, Hash as HashIcon, Zap, Play, Settings } from 'lucide-react';
+import Editor from '@monaco-editor/react';
+import { pluginFetch } from '../authHelper';
+
+type ToolId = 'hash' | 'base64' | 'jwt' | 'uuid' | 'password' | 'hmac' | 'encryption';
+
+interface UtilsAppProps {
+  tool: ToolId;
+}
+
+const UtilsApp: React.FC<UtilsAppProps> = ({ tool }) => {
+  const [input, setInput] = useState('');
+  const [output, setOutput] = useState<any>('');
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [algo, setAlgorithm] = useState(tool === 'encryption' ? 'aes-256-gcm' : 'sha256');
+  const [mode, setMode] = useState(tool === 'base64' ? 'encode' : 'encrypt');
+  const [saltRounds, setSaltRounds] = useState(10);
+  const [secret, setSecret] = useState('');
+  const [iv, setIv] = useState('');
+  const [authTag, setAuthTag] = useState('');
+  const [count, setCount] = useState(1);
+  const [passOptions, setPassOptions] = useState({ length: 24, upper: true, lower: true, nums: true, syms: true });
+
+  const copyToClipboard = (text: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const executeAction = useCallback(async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      let res;
+      switch (tool) {
+        case 'hash':
+          res = await pluginFetch('/api/utils/hash', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: input, algorithm: algo, saltRounds })
+          });
+          break;
+        case 'base64':
+          res = await pluginFetch('/api/utils/base64', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: input, mode })
+          });
+          break;
+        case 'jwt':
+          res = await pluginFetch('/api/utils/jwt/decode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: input })
+          });
+          break;
+        case 'uuid':
+          res = await pluginFetch(`/api/utils/uuid?count=${count}`);
+          break;
+        case 'password':
+          res = await pluginFetch('/api/utils/password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                length: passOptions.length, 
+                uppercase: passOptions.upper, 
+                lowercase: passOptions.lower, 
+                numbers: passOptions.nums, 
+                symbols: passOptions.syms 
+            })
+          });
+          break;
+        case 'hmac':
+          res = await pluginFetch('/api/utils/hmac', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: input, secret, algorithm: algo })
+          });
+          break;
+        case 'encryption':
+          res = await pluginFetch('/api/utils/encryption', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: input, key: secret, iv, algorithm: algo, mode, authTag })
+          });
+          break;
+      }
+
+      if (res && res.ok) {
+        const data = await res.json();
+        if (tool === 'uuid') setOutput(data.uuids.join('\n'));
+        else if (tool === 'password') setOutput(data.password);
+        else if (tool === 'hash') setOutput(data.hash);
+        else if (tool === 'base64') setOutput(data.result);
+        else if (tool === 'jwt') setOutput(JSON.stringify(data, null, 2));
+        else if (tool === 'hmac') setOutput(data.hmac);
+        else if (tool === 'encryption') {
+            setOutput(data.result);
+            if (mode === 'encrypt') {
+                if (data.iv) setIv(data.iv);
+                if (data.authTag) setAuthTag(data.authTag);
+            }
+        }
+      } else {
+        const err = await res?.json();
+        setError(err?.error || 'Operation failed');
+      }
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [tool, input, algo, mode, saltRounds, secret, iv, authTag, count, passOptions]);
+
+  useEffect(() => {
+    if (tool === 'uuid' || tool === 'password') executeAction();
+  }, [tool]);
+
+  const hasInput = !['uuid', 'password'].includes(tool);
+
+  return (
+    <div className="modern-utils-container">
+      <header className="modern-header">
+        <div className="tool-identity">{getToolIcon(tool)}
+          <div className="tool-info">
+            <h2 className="tool-name">{getToolTitle(tool)}</h2>
+            <span className="tool-tag">Runtime Infrastructure</span>
+          </div>
+        </div>
+        <div className="tool-actions">
+            <button className="run-btn" onClick={executeAction} disabled={loading}>
+                {loading ? <RefreshCw size={14} className="spin" /> : <Play size={14} />}
+                <span>Execute</span>
+            </button>
+            <button className="action-btn" onClick={() => copyToClipboard(output)}>
+                {copied ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
+                <span>Copy Result</span>
+            </button>
+        </div>
+      </header>
+
+      <div className="modern-layout">
+        {/* Settings Sidebar */}
+        <aside className="settings-sidebar">
+            <div className="sidebar-header">
+                <Settings size={12} />
+                <span>Configuration</span>
+            </div>
+            <div className="settings-content">
+                {tool === 'hash' && (
+                    <div className="setting-group">
+                        <label>Algorithm</label>
+                        <select value={algo} onChange={(e) => setAlgorithm(e.target.value)}>
+                            <option value="md5">MD5</option>
+                            <option value="sha1">SHA1</option>
+                            <option value="sha256">SHA256</option>
+                            <option value="sha512">SHA512</option>
+                            <option value="bcrypt">bcrypt</option>
+                        </select>
+                        {algo === 'bcrypt' && (
+                            <div style={{ marginTop: '15px' }}>
+                                <label>Salt Rounds ({saltRounds})</label>
+                                <input type="range" min={4} max={14} value={saltRounds} onChange={e => setSaltRounds(Number(e.target.value))} />
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {tool === 'base64' && (
+                    <div className="setting-group">
+                        <label>Mode</label>
+                        <div className="segment-control">
+                            <button className={mode === 'encode' ? 'active' : ''} onClick={() => setMode('encode')}>Encode</button>
+                            <button className={mode === 'decode' ? 'active' : ''} onClick={() => setMode('decode')}>Decode</button>
+                        </div>
+                    </div>
+                )}
+
+                {(tool === 'hmac' || tool === 'encryption') && (
+                    <div className="setting-group">
+                        <label>Algorithm</label>
+                        <select value={algo} onChange={(e) => setAlgorithm(e.target.value)}>
+                            {tool === 'hmac' ? (
+                                <><option value="sha256">SHA256</option><option value="sha512">SHA512</option></>
+                            ) : (
+                                <><option value="aes-256-gcm">AES-256-GCM</option><option value="aes-256-cbc">AES-256-CBC</option></>
+                            )}
+                        </select>
+                        
+                        <div style={{ marginTop: '15px' }}>
+                            <label>Secret Key (hex)</label>
+                            <input type="password" value={secret} onChange={(e) => setSecret(e.target.value)} placeholder="001122..." className="sidebar-input" />
+                        </div>
+
+                        {tool === 'encryption' && (
+                            <>
+                                <div className="segment-control" style={{ marginTop: '15px' }}>
+                                    <button className={mode === 'encrypt' ? 'active' : ''} onClick={() => setMode('encrypt')}>Encrypt</button>
+                                    <button className={mode === 'decrypt' ? 'active' : ''} onClick={() => setMode('decrypt')}>Decrypt</button>
+                                </div>
+                                <div style={{ marginTop: '15px' }}>
+                                    <label>IV (hex)</label>
+                                    <input type="text" value={iv} onChange={(e) => setIv(e.target.value)} className="sidebar-input" />
+                                </div>
+                                {algo.includes('gcm') && mode === 'decrypt' && (
+                                    <div style={{ marginTop: '15px' }}>
+                                        <label>Auth Tag (hex)</label>
+                                        <input type="text" value={authTag} onChange={(e) => setAuthTag(e.target.value)} className="sidebar-input" />
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                )}
+
+                {tool === 'uuid' && (
+                    <div className="setting-group">
+                        <label>Bulk Count</label>
+                        <input type="number" min={1} max={100} value={count} onChange={e => setCount(Number(e.target.value))} className="sidebar-input" />
+                    </div>
+                )}
+
+                {tool === 'password' && (
+                    <div className="setting-group">
+                        <label>Length ({passOptions.length})</label>
+                        <input type="range" min={8} max={64} value={passOptions.length} onChange={e => setPassOptions({...passOptions, length: Number(e.target.value)})} />
+                        
+                        <div className="checkbox-list" style={{ marginTop: '15px' }}>
+                            <label className="checkbox-item"><input type="checkbox" checked={passOptions.upper} onChange={e => setPassOptions({...passOptions, upper: e.target.checked})} /> A-Z</label>
+                            <label className="checkbox-item"><input type="checkbox" checked={passOptions.lower} onChange={e => setPassOptions({...passOptions, lower: e.target.checked})} /> a-z</label>
+                            <label className="checkbox-item"><input type="checkbox" checked={passOptions.nums} onChange={e => setPassOptions({...passOptions, nums: e.target.checked})} /> 0-9</label>
+                            <label className="checkbox-item"><input type="checkbox" checked={passOptions.syms} onChange={e => setPassOptions({...passOptions, syms: e.target.checked})} /> !@#</label>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </aside>
+
+        {/* Main Work Area */}
+        <div className="work-area">
+            {hasInput && (
+                <div className="input-frame">
+                    <div className="frame-bar">Input</div>
+                    <div className="editor-box">
+                        <Editor
+                            height="100%"
+                            language={tool === 'jwt' ? 'json' : 'plaintext'}
+                            value={input}
+                            theme="vs-dark"
+                            onChange={(val) => setInput(val || '')}
+                            options={{ minimap: { enabled: false }, fontSize: 13, scrollBeyondLastLine: false, lineNumbers: 'off', folding: false }}
+                        />
+                    </div>
+                </div>
+            )}
+
+            <div className={`output-frame ${!hasInput ? 'full' : ''}`}>
+                <div className="frame-bar">Result</div>
+                <div className="editor-box">
+                    <Editor
+                        height="100%"
+                        language={tool === 'jwt' ? 'json' : 'plaintext'}
+                        value={output}
+                        theme="vs-dark"
+                        options={{ readOnly: true, minimap: { enabled: false }, fontSize: 13, scrollBeyondLastLine: false, lineNumbers: 'off', folding: tool === 'jwt' }}
+                    />
+                </div>
+                {error && (
+                    <div className="error-overlay">
+                        <AlertCircle size={20} />
+                        <span>{error}</span>
+                    </div>
+                )}
+            </div>
+        </div>
+      </div>
+
+      <style>{`
+        .modern-utils-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #0f0f0f;
+            color: #e0e0e0;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+        .modern-header {
+            height: 60px;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #1a1a1a;
+            border-bottom: 1px solid #333;
+        }
+        .tool-identity { display: flex; align-items: center; gap: 15px; }
+        .tool-icon-bg {
+            width: 36px;
+            height: 36px;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-primary, #3d5afe);
+        }
+        .tool-name { margin: 0; fontSize: 16px; fontWeight: 600; }
+        .tool-tag { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .tool-actions { display: flex; gap: 10px; }
+        .run-btn, .action-btn {
+            height: 32px;
+            padding: 0 15px;
+            border-radius: 6px;
+            border: 1px solid #333;
+            background-color: #252526;
+            color: #ccc;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .run-btn { background-color: var(--accent-primary, #3d5afe); color: white; border: none; font-weight: 600; }
+        .run-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .action-btn:hover { background-color: #333; }
+
+        .modern-layout { flex: 1; display: flex; overflow: hidden; background-color: #1e1e1e; }
+        
+        .settings-sidebar {
+            width: 240px;
+            background-color: #1a1a1a;
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-header {
+            height: 30px;
+            padding: 0 15px;
+            background-color: #252526;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #666;
+            border-bottom: 1px solid #333;
+        }
+        .settings-content { padding: 20px; flex: 1; overflow-y: auto; }
+        .setting-group { margin-bottom: 25px; }
+        .setting-group label { display: block; font-size: 11px; color: #888; margin-bottom: 8px; font-weight: 500; }
+        
+        .sidebar-input, select {
+            width: 100%;
+            background-color: #0f0f0f;
+            border: 1px solid #333;
+            color: #ccc;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            outline: none;
+        }
+        .sidebar-input:focus { border-color: var(--accent-primary, #3d5afe); }
+        
+        .segment-control {
+            display: flex;
+            background-color: #0f0f0f;
+            padding: 2px;
+            border-radius: 6px;
+            border: 1px solid #333;
+        }
+        .segment-control button {
+            flex: 1; padding: 4px; border: none; background: none; color: #666; font-size: 10px; font-weight: 600; cursor: pointer; border-radius: 4px;
+        }
+        .segment-control button.active { background-color: #333; color: white; }
+        
+        .checkbox-list { display: flex; flex-direction: column; gap: 8px; }
+        .checkbox-item { display: flex; align-items: center; gap: 10px; color: #ccc; font-size: 12px; cursor: pointer; }
+        
+        input[type="range"] { width: 100%; height: 4px; background: #333; border-radius: 2px; appearance: none; outline: none; }
+        input[type="range"]::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; background: var(--accent-primary, #3d5afe); border-radius: 50%; cursor: pointer; }
+
+        .work-area { flex: 1; display: flex; flex-direction: column; background-color: #1e1e1e; }
+        .input-frame, .output-frame { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .input-frame { border-bottom: 1px solid #333; }
+        .output-frame.full { flex: 1; }
+        
+        .frame-bar { height: 30px; padding: 0 15px; background-color: #252526; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #666; display: flex; align-items: center; border-bottom: 1px solid #333; }
+        .editor-box { flex: 1; background-color: #1e1e1e; }
+        
+        .error-overlay {
+            position: absolute; bottom: 20px; left: 20px; right: 20px; padding: 12px 20px; background-color: #ef444415; border: 1px solid #ef444433; border-radius: 8px; color: #ef4444; font-size: 12px; display: flex; align-items: center; gap: 12px; backdrop-filter: blur(10px);
+        }
+        
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
+    </div>
+  );
+};
+
+const getToolTitle = (id: ToolId) => {
+    switch(id) {
+        case 'hash': return 'Hash Vault';
+        case 'base64': return 'Base64 Processor';
+        case 'jwt': return 'JWT Inspector';
+        case 'uuid': return 'Entropy UUID Gen';
+        case 'password': return 'Cipher Password Gen';
+        case 'hmac': return 'HMAC Forge';
+        case 'encryption': return 'Encryption Lab';
+    }
+};
+
+const getToolIcon = (id: ToolId) => {
+    switch(id) {
+        case 'hash': return <HashIcon size={18} />;
+        case 'base64': return <FileText size={18} />;
+        case 'jwt': return <Shield size={18} />;
+        case 'uuid': return <Zap size={18} />;
+        case 'password': return <Lock size={18} />;
+        case 'hmac': return <Key size={18} />;
+        case 'encryption': return <Shield size={18} />;
+    }
+};
+
+export default UtilsApp;
