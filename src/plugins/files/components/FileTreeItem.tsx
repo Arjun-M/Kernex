@@ -13,9 +13,10 @@ interface FileTreeItemProps {
   node: FileNode;
   level: number;
   selectedPath: string | null;
+  selectedPaths: Set<string>;
   expandedFolders: Set<string>;
   onToggle: (path: string) => void;
-  onSelect: (node: FileNode) => void;
+  onSelect: (node: FileNode, event: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent, node: FileNode) => void;
   onDrop: (e: React.DragEvent, node: FileNode) => void;
   onDragStart: (e: React.DragEvent, node: FileNode) => void;
@@ -32,6 +33,7 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
   node,
   level,
   selectedPath,
+  selectedPaths,
   expandedFolders,
   onToggle,
   onSelect,
@@ -47,7 +49,7 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
   onCreateCancel
 }) => {
   const isExpanded = expandedFolders.has(node.path);
-  const isSelected = selectedPath === node.path;
+  const isSelected = selectedPaths.has(node.path) || selectedPath === node.path;
   const isEditing = editingPath === node.path;
   const isCreatingChild = newFileParent === node.path;
 
@@ -109,7 +111,7 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
       <div 
         className={`file-row ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''}`}
         style={{ paddingLeft: `${level * 12 + 8}px` }}
-        onClick={() => onSelect(node)}
+        onClick={(e) => onSelect(node, e)}
         onContextMenu={(e) => onContextMenu(e, node)}
         draggable={!isEditing}
         onDragStart={(e) => onDragStart(e, node)}
@@ -179,6 +181,7 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
                 node={child}
                 level={level + 1}
                 selectedPath={selectedPath}
+                selectedPaths={selectedPaths}
                 expandedFolders={expandedFolders}
                 onToggle={onToggle}
                 onSelect={onSelect}

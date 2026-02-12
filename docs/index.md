@@ -1,30 +1,39 @@
 # Kernex Documentation
 
-Welcome to the Kernex documentation. Kernex is a self-hosted, infinite-canvas operating system for your developer tools.
+Kernex is a self-hosted, browser-based developer workspace with an infinite canvas, plugin tools, and workspace-scoped state.
 
-## Getting Started
+## Read By Goal
 
-*   **[Features](./FEATURES.md)**: Explore the built-in tools like Terminal, File Manager, and HTTP Tester.
-*   **[Architecture](./ARCHITECTURE.md)**: Specific details on the "Thick Client" design and Plugin system.
-*   **[Deployment](./DEPLOYMENT.md)**: How to host Kernex on Docker, Render, or a VPS.
-*   **[API Reference](./API.md)**: Detailed documentation of the backend API endpoints.
+### I am new (10-20 min)
+1. [Official Manual](OFFICIAL_MANUAL.md)
+2. [Installation & Setup](SETUP.md)
+3. [Workspaces & Canvas](WORKSPACES.md)
 
-## Extending Kernex
+### I am deploying to a server
+1. [Deployment](DEPLOYMENT.md)
+2. [Authentication](AUTHENTICATION.md)
+3. [System Management](SYSTEM.md)
 
-*   **[Plugin Development](./PLUGINS.md)**: A step-by-step guide to building your own React-based plugins using the iframe architecture.
+### I am building or extending Kernex
+1. [Architecture](ARCHITECTURE.md)
+2. [Plugin Development Guide](PLUGINS.md)
+3. [API Reference](API.md)
+4. [Contributing](CONTRIBUTING.md)
 
-## Community
+## Documentation Map
+- [Official Manual](OFFICIAL_MANUAL.md)
+- [Features Overview](FEATURES.md)
+- [Installation & Setup](SETUP.md)
+- [Deployment](DEPLOYMENT.md)
+- [Authentication](AUTHENTICATION.md)
+- [Workspaces & Canvas](WORKSPACES.md)
+- [System Management](SYSTEM.md)
+- [FTP Server & Client](FTP.md)
+- [Architecture](ARCHITECTURE.md)
+- [Plugin Development Guide](PLUGINS.md)
+- [Plugin Catalog](PLUGINS_DETAILED.md)
+- [API Reference](API.md)
+- [Contributing](CONTRIBUTING.md)
 
-*   **GitHub**: [https://github.com/Arjun-M/Kernex](https://github.com/Arjun-M/Kernex)
-*   **Issues**: Report bugs or request features on the GitHub repository.
-
-## Screenshots
-
-### Home Dashboard
-![Home Dashboard](../public/assets/home.png)
-
-### Workspace Canvas
-![Workspace](../public/assets/workspace.png)
-
-### System Settings
-![Settings](../public/assets/settings.png)
+## Versioning Note
+This docs set is aligned with current repository behavior (frontend plugins under `src/plugins/` and backend routes under `server/api/`).

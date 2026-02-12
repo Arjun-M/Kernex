@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, Trash2, Search, FileText, Check, Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import './NotesApp.css';
 import { pluginFetch } from '../authHelper';
+import { usePluginState } from '../../hooks/usePluginState';
 
 interface Note {
   id: string;
@@ -10,42 +11,33 @@ interface Note {
   updated_at: number;
 }
 
-interface NotesAppState {
-  noteId?: string | null;
-  isFullscreen?: boolean;
-  scrollPosition?: number;
+interface NotesPluginState {
+    activeNoteId: string | null;
+    isFullscreen: boolean;
+    // We could store scrollPosition here too, but it might be too jittery for remote state unless throttled heavily.
 }
 
-interface NotesAppProps {
-  initialState?: NotesAppState;
-  onStateChange?: (state: NotesAppState) => void;
-}
+const NotesApp: React.FC = () => {
+  // State Management Hook
+  const [persistedState, setPersistedState, stateLoading] = usePluginState<NotesPluginState>('notes-app', {
+      activeNoteId: null,
+      isFullscreen: false
+  });
 
-const NotesApp: React.FC<NotesAppProps> = ({ initialState, onStateChange }) => {
   const [notes, setNotes] = useState<Note[]>([]);
-  const [activeNoteId, setActiveNoteId] = useState<string | null>(initialState?.noteId || null);
+  // Use local state for immediate interaction, sync with persisted
+  const activeNoteId = persistedState.activeNoteId;
+  const isFullscreen = persistedState.isFullscreen;
+
   const [activeNote, setActiveNote] = useState<Note | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
   const [isLoading, setIsLoading] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(initialState?.isFullscreen || false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   
   const workspaceId = 'default';
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Sync state to canvas
-  const syncState = useCallback((updates: Partial<NotesAppState>) => {
-    if (onStateChange) {
-      onStateChange({
-        noteId: activeNoteId,
-        isFullscreen,
-        scrollPosition: textareaRef.current?.scrollTop || 0,
-        ...updates
-      });
-    }
-  }, [activeNoteId, isFullscreen, onStateChange]);
 
   // Fetch all notes
   const fetchNotes = useCallback(async () => {
@@ -54,22 +46,20 @@ const NotesApp: React.FC<NotesAppProps> = ({ initialState, onStateChange }) => {
       const data = await res.json();
       setNotes(data);
       
-      // Auto-select most recent if none selected
-      if (!activeNoteId && data.length > 0) {
-        setActiveNoteId(data[0].id);
-      }
+      // If we loaded notes, and we have an activeNoteId in state, ensuring it exists is handled by the useEffect below
+      // If no activeNoteId, we can optionally default to first, but maybe better to respect "no selection".
     } catch (e) {
       console.error('Failed to fetch notes', e);
     } finally {
       setIsLoading(false);
     }
-  }, [workspaceId, activeNoteId]);
+  }, [workspaceId]);
 
   useEffect(() => {
     fetchNotes();
   }, [fetchNotes]);
 
-  // Load specific note content
+  // Load specific note content when activeNoteId changes
   useEffect(() => {
     if (activeNoteId) {
       const loadNote = async () => {
@@ -78,24 +68,21 @@ const NotesApp: React.FC<NotesAppProps> = ({ initialState, onStateChange }) => {
           if (res.ok) {
             const data = await res.json();
             setActiveNote(data);
-            
-            // Restore scroll position after content is loaded
-            if (initialState?.scrollPosition && textareaRef.current) {
-                setTimeout(() => {
-                    if (textareaRef.current) textareaRef.current.scrollTop = initialState.scrollPosition!;
-                }, 0);
-            }
-            syncState({ noteId: activeNoteId });
+          } else {
+             // Note might be deleted
+             setPersistedState(prev => ({ ...prev, activeNoteId: null }));
+             setActiveNote(null);
           }
         } catch (e) {
           console.error('Failed to load note content');
+          setActiveNote(null);
         }
       };
       loadNote();
     } else {
       setActiveNote(null);
     }
-  }, [activeNoteId]); // Note: syncState is not here to avoid loops
+  }, [activeNoteId]);
 
   // Auto-save logic
   const performSave = useCallback(async (note: Note) => {
@@ -121,8 +108,7 @@ const NotesApp: React.FC<NotesAppProps> = ({ initialState, onStateChange }) => {
 
   const triggerAutoSave = useCallback((note: Note) => {
     if (!autoSaveEnabled) {
-        // Show unsaved status if auto-save is off
-        setSaveStatus('error'); // Reusing error style for now to indicate unsaved/dirty
+        setSaveStatus('error'); 
         return;
     }
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -161,15 +147,7 @@ const NotesApp: React.FC<NotesAppProps> = ({ initialState, onStateChange }) => {
   }, [activeNote, performSave]);
 
   const toggleFullscreen = () => {
-    const newState = !isFullscreen;
-    setIsFullscreen(newState);
-    syncState({ isFullscreen: newState });
-  };
-
-  const handleScroll = () => {
-    if (textareaRef.current) {
-      syncState({ scrollPosition: textareaRef.current.scrollTop });
-    }
+    setPersistedState(prev => ({ ...prev, isFullscreen: !prev.isFullscreen }));
   };
 
   const createNewNote = async () => {
@@ -182,7 +160,7 @@ const NotesApp: React.FC<NotesAppProps> = ({ initialState, onStateChange }) => {
       if (res.ok) {
         const newNote = await res.json();
         setNotes([newNote, ...notes]);
-        setActiveNoteId(newNote.id);
+        setPersistedState(prev => ({ ...prev, activeNoteId: newNote.id }));
       }
     } catch (e) {
       console.error('Failed to create note');
@@ -199,9 +177,8 @@ const NotesApp: React.FC<NotesAppProps> = ({ initialState, onStateChange }) => {
       if (res.ok) {
         setNotes(prev => prev.filter(n => n.id !== id));
         if (activeNoteId === id) {
-            setActiveNoteId(null);
+            setPersistedState(prev => ({ ...prev, activeNoteId: null }));
             setActiveNote(null);
-            syncState({ noteId: null });
         }
       }
     } catch (e) {
@@ -212,6 +189,10 @@ const NotesApp: React.FC<NotesAppProps> = ({ initialState, onStateChange }) => {
   const filteredNotes = notes.filter(n => 
     n.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (stateLoading) {
+      return <div style={{ padding: 20 }}>Loading state...</div>;
+  }
 
   return (
     <div className={`notes-app ${isFullscreen ? 'fullscreen' : ''}`}>
@@ -241,7 +222,7 @@ const NotesApp: React.FC<NotesAppProps> = ({ initialState, onStateChange }) => {
               <div 
                 key={note.id} 
                 className={`note-item ${activeNoteId === note.id ? 'active' : ''}`}
-                onClick={() => setActiveNoteId(note.id)}
+                onClick={() => setPersistedState(prev => ({ ...prev, activeNoteId: note.id }))}
               >
                 <FileText size={14} />
                 <div className="note-item-info">
@@ -296,7 +277,6 @@ const NotesApp: React.FC<NotesAppProps> = ({ initialState, onStateChange }) => {
               className="note-textarea"
               value={activeNote.content}
               onChange={handleContentChange}
-              onScroll={handleScroll}
               onBlur={() => autoSaveEnabled && performSave(activeNote)}
               placeholder="Start writing..."
               spellCheck={false}

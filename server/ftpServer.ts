@@ -4,16 +4,21 @@ import fs from 'fs/promises';
 import path from 'path';
 import bcrypt from 'bcryptjs';
 import { logEmitter } from './logEmitter.js';
+import { ftpLogger } from './ftpLogger.js';
 
 const FTP_PORT = 2121;
 const WORKSPACE_ROOT = path.join(process.cwd(), 'workspace');
 
 export class FtpServerManager {
   private ftpServer: FtpSrv | null = null;
+  private isRunning = false;
 
   constructor() {
-    const externalIp =
-      getSetting<string>('ftpExternalIp', '') || '127.0.0.1';
+    // Lazy initialization in start()
+  }
+
+  private initServer() {
+    const externalIp = getSetting<string>('ftpExternalIp', '') || '127.0.0.1';
 
     this.ftpServer = new FtpSrv({
       url: `ftp://0.0.0.0:${FTP_PORT}`,
@@ -21,8 +26,9 @@ export class FtpServerManager {
       pasv_max: 30100,
       pasv_url: externalIp,
       greeting: 'Welcome to Kernex FTP',
-      anonymous: false // Disable anonymous login
-    });
+      anonymous: false, // Disable anonymous login
+      log: ftpLogger // Use custom logger
+    } as any);
 
     this.setupAuth();
   }
@@ -64,30 +70,70 @@ export class FtpServerManager {
         });
 
       } catch (err) {
-        console.error('FTP Auth Error:', err);
+        ftpLogger.error({ msg: 'FTP Auth Error', error: err });
         reject(err as Error);
       }
     });
 
     this.ftpServer.on('client-error', ({ connection: _connection, context: _context, error }) => {
-      console.error('FTP Client Error:', error);
+      // Suppress annoying "Socket not writable" errors or handle gracefully
+      if (error.message && error.message.includes('Socket not writable')) {
+          return;
+      }
+      ftpLogger.error({ msg: 'FTP Client Error', error });
     });
   }
 
   public async start() {
-    if (!this.ftpServer) return;
+    const enabled = getSetting<boolean>('ftpServerEnabled', false);
+    
+    if (!enabled) {
+      if (this.isRunning) {
+        await this.stop();
+      }
+      return;
+    }
+
+    if (this.isRunning) {
+      return; // Already running
+    }
+
     try {
-      await this.ftpServer.listen();
-      console.log(`FTP Server running on ftp://0.0.0.0:${FTP_PORT}`);
-    } catch (err) {
-      console.error('Failed to start FTP server:', err);
+      this.initServer();
+      if (this.ftpServer) {
+        await this.ftpServer.listen();
+        this.isRunning = true;
+        ftpLogger.info(`FTP Server running on ftp://0.0.0.0:${FTP_PORT}`);
+      }
+    } catch (err: any) {
+      ftpLogger.error(`Failed to start FTP server: ${err.message}`);
+      this.isRunning = false;
     }
   }
 
-  public close() {
-    if (this.ftpServer) {
-      this.ftpServer.close();
+  public async stop() {
+    if (this.ftpServer && this.isRunning) {
+      try {
+        await this.ftpServer.close();
+        this.ftpServer = null;
+        this.isRunning = false;
+        ftpLogger.info('FTP Server stopped');
+      } catch (err: any) {
+        ftpLogger.error(`Error stopping FTP server: ${err.message}`);
+      }
     }
+  }
+
+  public async restart() {
+    await this.stop();
+    await this.start();
+  }
+
+  public getStatus() {
+    return {
+      running: this.isRunning,
+      port: FTP_PORT
+    };
   }
 }
 

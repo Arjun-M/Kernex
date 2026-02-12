@@ -24,15 +24,6 @@ db.exec(`
     value TEXT
   );
 
-  CREATE TABLE IF NOT EXISTS notes (
-    id TEXT PRIMARY KEY,
-    workspace_id TEXT,
-    title TEXT,
-    content TEXT,
-    created_at INTEGER,
-    updated_at INTEGER
-  );
-
   CREATE TABLE IF NOT EXISTS short_urls (
     id TEXT PRIMARY KEY,
     target TEXT NOT NULL,
@@ -79,7 +70,6 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp);
-  CREATE INDEX IF NOT EXISTS idx_notes_workspace ON notes(workspace_id);
 `);
 
 // Migration: Add expires_at if missing

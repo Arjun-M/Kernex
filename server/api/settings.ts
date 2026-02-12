@@ -16,6 +16,10 @@ const DEFAULT_SETTINGS = {
   maxUndoHistory: 50,
   snapshotFrequency: 'hourly',
   exportFormat: 'json',
+  
+  // Services
+  ftpServerEnabled: false,
+  ftpExternalIp: '', // Add explicit default for this too since we use it
 
   // Keyboard
   keybindings: {},

@@ -4,6 +4,7 @@ import fsSync from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { logActivity } from '../dbLogger.js';
+import getDb from '../utils/db.js'; // Import the DB util
 
 const WORKSPACE_ROOT = path.join(process.cwd(), 'workspace');
 
@@ -91,6 +92,14 @@ export default async function workspaceRoutes(fastify: FastifyInstance) {
 
     try {
       await fs.mkdir(workspacePath);
+
+      // Initialize DB
+      try {
+        const db = getDb(id);
+        db.close();
+      } catch (e) {
+        request.log.error({ err: e }, 'Failed to initialize workspace DB');
+      }
 
       let passwordHash: string | undefined;
       if (password) {
@@ -181,6 +190,20 @@ export default async function workspaceRoutes(fastify: FastifyInstance) {
     } catch (err) {
       request.log.error(err);
       return reply.status(500).send({ error: 'Failed to update workspace' });
+    }
+  });
+
+  // Maintenance: Optimize DB
+  fastify.post('/:id/maintenance/vacuum', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    
+    try {
+        const db = getDb(id);
+        db.pragma('vacuum');
+        db.close();
+        return { success: true };
+    } catch (e: any) {
+        return reply.status(500).send({ error: e.message });
     }
   });
 

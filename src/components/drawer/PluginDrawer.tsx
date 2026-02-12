@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, X, Globe, FileText, Database, Terminal, Link as LinkIcon, 
   Hash, Zap, Lock, Key, Shield, FileCode, FileJson, Table, Diff, 
-  FileType, List, Layers, ChevronDown, ChevronRight, Server
+  FileType, List, Layers, ChevronDown, ChevronRight, Server, Image as ImageIcon
 } from 'lucide-react';
 import './PluginDrawer.css';
 
@@ -23,6 +23,33 @@ interface Plugin {
 }
 
 const PLUGINS: Plugin[] = [
+  {
+    id: 'photo-viewer',
+    title: 'Photo Viewer',
+    description: 'Simple image viewer',
+    icon: <ImageIcon size={24} />,
+    type: 'iframe',
+    iframeSrc: '/i/photo-viewer/index.html',
+    category: 'Media Tools'
+  },
+  {
+    id: 'image-studio',
+    title: 'Image Studio',
+    description: 'View, edit, and convert images',
+    icon: <ImageIcon size={24} color="#ec4899" />,
+    type: 'iframe',
+    iframeSrc: '/i/image-studio/index.html',
+    category: 'Media Tools'
+  },
+  {
+    id: 'web-extractor',
+    title: 'Website Extractor',
+    description: 'Download source code from URLs',
+    icon: <Globe size={24} color="#3b82f6" />,
+    type: 'iframe',
+    iframeSrc: '/i/website-extractor/index.html',
+    category: 'Productivity Utilities'
+  },
   {
     id: 'note',
     title: 'Note',
@@ -70,8 +97,8 @@ const PLUGINS: Plugin[] = [
   },
   {
     id: 'db-viewer',
-    title: 'DB Viewer',
-    description: 'Inspect and query the system database',
+    title: 'SQL Viewer',
+    description: 'Inspect and query workspace SQLite databases',
     icon: <Database size={24} />,
     type: 'iframe',
     iframeSrc: '/i/db/index.html',
@@ -211,6 +238,15 @@ const PLUGINS: Plugin[] = [
     type: 'iframe',
     iframeSrc: '/i/encryption/index.html',
     category: 'Cryptography'
+  },
+  {
+    id: 'url-tracer',
+    title: 'URL Tracer',
+    description: 'Analyze URL redirects and paths',
+    icon: <LinkIcon size={24} color="#8b5cf6" />,
+    type: 'iframe',
+    iframeSrc: '/i/url-tracer/index.html',
+    category: 'URL & Routing'
   },
   {
     id: 'short-urls',

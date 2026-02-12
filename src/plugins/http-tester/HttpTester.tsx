@@ -1,196 +1,277 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './HttpTester.css';
-import { Play, Square, Plus, Trash2 } from 'lucide-react';
+import { Sidebar } from './components/Sidebar';
+import { RequestPanel } from './components/RequestPanel';
+import { ResponsePanel } from './components/ResponsePanel';
+import { EnvironmentManager } from './components/EnvironmentManager';
+import { Plus, X, Settings, PanelLeft } from 'lucide-react';
+import type { HttpRequest, HttpResponse, Collection, Environment } from './types';
 import { pluginFetch } from '../authHelper';
 
-interface Header {
-  key: string;
-  value: string;
-  enabled: boolean;
-}
-
-interface Param {
-  key: string;
-  value: string;
-  enabled: boolean;
-}
-
-type BodyType = 'none' | 'json' | 'form' | 'raw';
-
 const HttpTester = () => {
-  const [method, setMethod] = useState('GET');
-  const [url, setUrl] = useState('https://jsonplaceholder.typicode.com/todos/1');
-  const [activeTab, setActiveTab] = useState<'params' | 'headers' | 'body' | 'auth'>('params');
-  const [headers, setHeaders] = useState<Header[]>([{ key: '', value: '', enabled: true }]);
-  const [params, setParams] = useState<Param[]>([{ key: '', value: '', enabled: true }]);
-  const [bodyType, setBodyType] = useState<BodyType>('none');
-  const [bodyContent, setBodyContent] = useState('');
-  const [response, setResponse] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [tabs, setTabs] = useState<HttpRequest[]>([{
+    id: '1',
+    name: 'New Request',
+    method: 'GET',
+    url: 'https://jsonplaceholder.typicode.com/todos/1',
+    headers: [{ key: '', value: '', enabled: true }],
+    params: [{ key: '', value: '', enabled: true }],
+    body: { type: 'none', content: '' },
+    auth: { type: 'none' }
+  }]);
+  
+  const [activeTabId, setActiveTabId] = useState<string>('1');
+  const [responses, setResponses] =useState<Record<string, HttpResponse | null>>({});
+  const [loadings, setLoadings] = useState<Record<string, boolean>>({});
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
+  const [collections, setCollections] = useState<Collection[]>([]);
+  
+  // Environment State
+  const [environments, setEnvironments] = useState<Environment[]>([]);
+  const [activeEnvId, setActiveEnvId] = useState<string>('none');
+  const [isEnvManagerOpen, setIsEnvManagerOpen] = useState(false);
+  
+  // Resizing state
+  const [splitPos, setSplitPos] = useState(50); // percentage
+  const [isResizing, setIsResizing] = useState(false);
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const workspaceId = urlParams.get('workspaceId');
+
+  // Fetch initial data
+  const fetchData = async () => {
+      try {
+          const [colsRes, envsRes] = await Promise.all([
+              pluginFetch(`/api/http/${workspaceId}/collections`),
+              pluginFetch(`/api/http/${workspaceId}/environments`)
+          ]);
+          setCollections(await colsRes.json());
+          setEnvironments(await envsRes.json());
+      } catch (e) {
+          console.error('Failed to fetch initial data', e);
+      }
+  };
+
+  useEffect(() => {
+      if(workspaceId) fetchData();
+  }, [workspaceId]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsResizing(true);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+      if (!isResizing) return;
+      
+      const container = e.currentTarget.getBoundingClientRect();
+      const newPos = ((e.clientX - container.left) / container.width) * 100;
+      
+      // Limit constraints (min 20%, max 80%)
+      if (newPos > 20 && newPos < 80) {
+          setSplitPos(newPos);
+      }
+  };
+
+  const handleMouseUp = () => {
+      setIsResizing(false);
+  };
+
+  const activeReq = tabs.find(t => t.id === activeTabId);
+  const activeEnv = environments.find(e => e.id === activeEnvId);
+
+  const addTab = () => {
+    const newId = Date.now().toString();
+    setTabs([...tabs, {
+      id: newId,
+      name: 'New Request',
+      method: 'GET',
+      url: '',
+      headers: [{ key: '', value: '', enabled: true }],
+      params: [{ key: '', value: '', enabled: true }],
+      body: { type: 'none', content: '' },
+      auth: { type: 'none' }
+    }]);
+    setActiveTabId(newId);
+  };
+
+  const closeTab = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (tabs.length === 1) return; 
+    const newTabs = tabs.filter(t => t.id !== id);
+    setTabs(newTabs);
+    if (activeTabId === id) {
+      setActiveTabId(newTabs[newTabs.length - 1].id!);
+    }
+  };
+
+  const updateRequest = (req: HttpRequest) => {
+    setTabs(tabs.map(t => t.id === req.id ? req : t));
+  };
+
+  const handleLoadRequest = (req: HttpRequest) => {
+    const newId = Date.now().toString();
+    setTabs([...tabs, { ...req, id: newId }]);
+    setActiveTabId(newId);
+  };
+
+  const replaceVariables = (str: string) => {
+      if (!activeEnv || !str) return str;
+      let result = str;
+      activeEnv.variables.forEach(v => {
+          if (v.key) {
+              const regex = new RegExp(`{{${v.key}}}`, 'g');
+              result = result.replace(regex, v.value);
+          }
+      });
+      return result;
+  };
 
   const handleSend = async () => {
-    setLoading(true);
-    setResponse(null);
-    setError(null);
+    if (!activeReq || !workspaceId) return;
+    const reqId = activeReq.id!;
+    
+    setLoadings(prev => ({ ...prev, [reqId]: true }));
+    setErrors(prev => ({ ...prev, [reqId]: null }));
+    setResponses(prev => ({ ...prev, [reqId]: null }));
 
     try {
       // Build query params
-      const activeParams = params.filter(p => p.enabled && p.key);
-      const queryString = activeParams.map(p => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`).join('&');
-      const finalUrl = queryString ? `${url}${url.includes('?') ? '&' : '?'}${queryString}` : url;
+      const activeParams = activeReq.params.filter(p => p.enabled && p.key);
+      const queryString = activeParams.map(p => {
+          const key = replaceVariables(p.key);
+          const val = replaceVariables(p.value);
+          return `${encodeURIComponent(key)}=${encodeURIComponent(val)}`;
+      }).join('&');
+      
+      const baseUrl = replaceVariables(activeReq.url);
+      const finalUrl = queryString ? `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${queryString}` : baseUrl;
 
       // Build headers
-      const activeHeaders = headers.reduce((acc, h) => {
-        if (h.enabled && h.key) acc[h.key] = h.value;
+      const activeHeaders = activeReq.headers.reduce((acc, h) => {
+        if (h.enabled && h.key) {
+            const key = replaceVariables(h.key);
+            const val = replaceVariables(h.value);
+            acc[key] = val;
+        }
         return acc;
       }, {} as Record<string, string>);
 
+      // Handle Auth
+      if (activeReq.auth.type === 'basic' && activeReq.auth.username) {
+          const user = replaceVariables(activeReq.auth.username);
+          const pass = replaceVariables(activeReq.auth.password || '');
+          const creds = btoa(`${user}:${pass}`);
+          activeHeaders['Authorization'] = `Basic ${creds}`;
+      } else if (activeReq.auth.type === 'bearer' && activeReq.auth.token) {
+          const token = replaceVariables(activeReq.auth.token);
+          activeHeaders['Authorization'] = `Bearer ${token}`;
+      }
+
       const payload = {
-        method,
+        method: activeReq.method,
         url: finalUrl,
         headers: activeHeaders,
-        body: bodyType === 'none' ? undefined : { type: bodyType, content: bodyContent }
+        body: activeReq.body.type === 'none' ? undefined : { 
+            type: activeReq.body.type, 
+            content: replaceVariables(activeReq.body.content) 
+        },
+        saveHistory: true
       };
 
-      const res = await pluginFetch('/api/http/execute', {
+      const res = await pluginFetch(`/api/http/${workspaceId}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
       const data = await res.json();
-      setResponse(data);
+      if (res.status >= 400 && data.message) throw new Error(data.message);
+      
+      setResponses(prev => ({ ...prev, [reqId]: data }));
     } catch (err: any) {
-      setError(err.message || 'Request Failed');
+      setErrors(prev => ({ ...prev, [reqId]: err.message || 'Request Failed' }));
     } finally {
-      setLoading(false);
+      setLoadings(prev => ({ ...prev, [reqId]: false }));
     }
   };
 
-  const addRow = (setter: React.Dispatch<React.SetStateAction<any[]>>) => {
-    setter(prev => [...prev, { key: '', value: '', enabled: true }]);
-  };
-
-  const removeRow = (index: number, setter: React.Dispatch<React.SetStateAction<any[]>>) => {
-    setter(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const updateRow = (index: number, field: string, value: any, setter: React.Dispatch<React.SetStateAction<any[]>>) => {
-    setter(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
-  };
-
   return (
-    <div className="http-tester">
-      <div className="top-bar">
-        <select value={method} onChange={e => setMethod(e.target.value)} className="method-select">
-          {['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'].map(m => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
-        <input 
-          type="text" 
-          value={url} 
-          onChange={e => setUrl(e.target.value)} 
-          placeholder="Enter request URL" 
-          className="url-input"
-        />
-        <button className="send-btn" onClick={handleSend} disabled={loading}>
-          {loading ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
-          {loading ? 'Cancel' : 'Send'}
-        </button>
+    <div className={`http-tester-layout ${!sidebarVisible ? 'sidebar-hidden' : ''}`}>
+      <div className="sidebar-container">
+        <Sidebar onLoadRequest={handleLoadRequest} />
       </div>
-
-      <div className="main-content">
-        <div className="request-panel">
-          <div className="tabs">
-            {['params', 'headers', 'body', 'auth'].map(tab => (
-              <button 
-                key={tab} 
-                className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab as any)}
-              >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+      
+      <div className="main-area">
+        <div className="top-toolbar">
+            <div className="tabs-bar">
+              <button className="sidebar-toggle-btn" onClick={() => setSidebarVisible(!sidebarVisible)}>
+                <PanelLeft size={16} />
               </button>
-            ))}
-          </div>
-
-          <div className="tab-content">
-            {activeTab === 'params' && (
-              <div className="key-value-editor">
-                {params.map((param, i) => (
-                  <div key={i} className="kv-row">
-                    <input type="checkbox" checked={param.enabled} onChange={e => updateRow(i, 'enabled', e.target.checked, setParams)} />
-                    <input type="text" placeholder="Key" value={param.key} onChange={e => updateRow(i, 'key', e.target.value, setParams)} />
-                    <input type="text" placeholder="Value" value={param.value} onChange={e => updateRow(i, 'value', e.target.value, setParams)} />
-                    <button onClick={() => removeRow(i, setParams)} className="icon-btn"><Trash2 size={14} /></button>
-                  </div>
+                {tabs.map(tab => (
+                    <div 
+                        key={tab.id} 
+                        className={`request-tab ${activeTabId === tab.id ? 'active' : ''}`}
+                        onClick={() => setActiveTabId(tab.id!)}
+                    >
+                    <span className={`method-dot ${tab.method.toLowerCase()}`}></span>
+                    <span className="tab-name">{tab.name}</span>
+                    <button className="close-tab" onClick={(e) => closeTab(e, tab.id!)}><X size={12}/></button>
+                    </div>
                 ))}
-                <button onClick={() => addRow(setParams)} className="add-row-btn"><Plus size={14} /> Add Param</button>
-              </div>
-            )}
-
-            {activeTab === 'headers' && (
-               <div className="key-value-editor">
-                {headers.map((header, i) => (
-                  <div key={i} className="kv-row">
-                    <input type="checkbox" checked={header.enabled} onChange={e => updateRow(i, 'enabled', e.target.checked, setHeaders)} />
-                    <input type="text" placeholder="Key" value={header.key} onChange={e => updateRow(i, 'key', e.target.value, setHeaders)} />
-                    <input type="text" placeholder="Value" value={header.value} onChange={e => updateRow(i, 'value', e.target.value, setHeaders)} />
-                    <button onClick={() => removeRow(i, setHeaders)} className="icon-btn"><Trash2 size={14} /></button>
-                  </div>
-                ))}
-                <button onClick={() => addRow(setHeaders)} className="add-row-btn"><Plus size={14} /> Add Header</button>
-              </div>
-            )}
-
-            {activeTab === 'body' && (
-              <div className="body-editor">
-                <div className="body-type-select">
-                  {['none', 'json', 'raw', 'form'].map(t => (
-                    <label key={t}><input type="radio" checked={bodyType === t} onChange={() => setBodyType(t as BodyType)} /> {t}</label>
-                  ))}
-                </div>
-                {bodyType !== 'none' && (
-                  <textarea 
-                    value={bodyContent} 
-                    onChange={e => setBodyContent(e.target.value)} 
-                    placeholder="Request body..."
-                  />
-                )}
-              </div>
-            )}
+                <button className="add-tab-btn" onClick={addTab}><Plus size={14}/></button>
+            </div>
             
-            {activeTab === 'auth' && (
-                <div className="auth-editor">
-                    <p>Auth settings not implemented yet in prototype.</p>
-                </div>
-            )}
-          </div>
+            <div className="env-toolbar">
+                <select 
+                    value={activeEnvId} 
+                    onChange={e => setActiveEnvId(e.target.value)}
+                    className="env-select"
+                >
+                    <option value="none">No Environment</option>
+                    {environments.map(env => (
+                        <option key={env.id} value={env.id}>{env.name}</option>
+                    ))}
+                </select>
+                <button className="env-settings-btn" onClick={() => setIsEnvManagerOpen(true)}>
+                    <Settings size={16}/>
+                </button>
+            </div>
         </div>
 
-        <div className="response-panel">
-          {error && <div className="error-banner">{error}</div>}
-          {response && (
-            <>
-              <div className="response-meta">
-                <span className={`status-badge ${response.status >= 200 && response.status < 300 ? 'success' : 'error'}`}>
-                  {response.status} {response.statusText}
-                </span>
-                <span>{response.timeMs}ms</span>
-                <span>{response.size}B</span>
-              </div>
-              <div className="response-body">
-                <pre>{typeof response.body === 'object' ? JSON.stringify(response.body, null, 2) : response.body}</pre>
-              </div>
-            </>
-          )}
-          {!response && !loading && !error && (
-            <div className="empty-state">Response will appear here</div>
-          )}
-          {loading && <div className="loading-state">Sending request...</div>}
+        <div className="workspace-split" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+           {activeReq && (
+               <>
+                 <div className="request-pane" style={{ width: `${splitPos}%` }}>
+                    <RequestPanel 
+                       request={activeReq} 
+                       onRequestChange={updateRequest} 
+                       onSend={handleSend}
+                       loading={loadings[activeReq.id!] || false}
+                       collections={collections}
+                    />
+                 </div>
+                 
+                 <div className="resize-handle" onMouseDown={handleMouseDown} />
+
+                 <div className="response-pane" style={{ width: `${100 - splitPos}%` }}>
+                    <ResponsePanel 
+                       response={responses[activeReq.id!] || null} 
+                       loading={loadings[activeReq.id!] || false}
+                       error={errors[activeReq.id!] || null}
+                    />
+                 </div>
+               </>
+           )}
         </div>
       </div>
+
+      <EnvironmentManager 
+        isOpen={isEnvManagerOpen} 
+        onClose={() => setIsEnvManagerOpen(false)} 
+        onEnvironmentChanged={fetchData}
+      />
     </div>
   );
 };

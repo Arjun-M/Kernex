@@ -9,6 +9,12 @@ export const DOCS_MAP: DocEntry[] = [
     children: [
         {
             type: 'file',
+            name: 'index.md',
+            title: 'Overview',
+            path: ''
+        },
+        {
+            type: 'file',
             name: 'OFFICIAL_MANUAL.md',
             title: 'Full Manual',
             path: 'OFFICIAL_MANUAL'
@@ -18,6 +24,12 @@ export const DOCS_MAP: DocEntry[] = [
             name: 'SETUP.md',
             title: 'Installation & Setup',
             path: 'SETUP'
+        },
+        {
+            type: 'file',
+            name: 'FEATURES.md',
+            title: 'Features Overview',
+            path: 'FEATURES'
         },
     ]
   },
@@ -67,8 +79,14 @@ export const DOCS_MAP: DocEntry[] = [
       },
       {
         type: 'file',
+        name: 'PLUGINS.md',
+        title: 'Plugin Development',
+        path: 'PLUGINS'
+      },
+      {
+        type: 'file',
         name: 'PLUGINS_DETAILED.md',
-        title: 'Plugins & Tools',
+        title: 'Plugin Catalog',
         path: 'PLUGINS_DETAILED'
       },
       {

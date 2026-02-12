@@ -107,13 +107,10 @@ const WorkspaceEnvironment: React.FC = () => {
   }, [isLoaded, nodes, panOffset, zoom, activeTool, saveCanvasState, workspaceId]);
 
   // Helper to create node content with bindings
-  const createNodeContent = useCallback((appId: string, nodeId: string, initialData?: any) => {
+  const createNodeContent = useCallback((appId: string) => {
       switch(appId) {
           case 'notes': return (
-              <NotesApp 
-                  initialState={initialData} 
-                  onStateChange={(newState) => handleUpdateNode(nodeId, { data: newState })} 
-              />
+              <NotesApp />
           );
           default: return null;
       }
@@ -148,7 +145,7 @@ const WorkspaceEnvironment: React.FC = () => {
                     if (n.title === 'Notes') appId = 'notes'; 
                     
                     if (appId) {
-                        n.content = createNodeContent(appId, n.id, n.data);
+                        n.content = createNodeContent(appId);
                     }
                 }
                 return n;
@@ -281,7 +278,7 @@ const WorkspaceEnvironment: React.FC = () => {
 
     let content = options.content;
     if (options.appId && type === 'react') {
-        content = createNodeContent(options.appId, id, options.data);
+        content = createNodeContent(options.appId);
     }
     
     const newNode: NodeData = {
@@ -327,7 +324,14 @@ const WorkspaceEnvironment: React.FC = () => {
           case 'files':
               title = 'File Manager';
               type = 'iframe';
-              addNode(type, title, { iframeSrc: appendParams('/i/files/index.html'), data: initialData });
+              let src = '/i/files/index.html';
+              const params = [];
+              if (initialData?.initialPath) params.push(`initialPath=${encodeURIComponent(initialData.initialPath)}`);
+              if (initialData?.scope) params.push(`scope=${encodeURIComponent(initialData.scope)}`);
+              
+              if (params.length > 0) src += `?${params.join('&')}`;
+              
+              addNode(type, title, { iframeSrc: appendParams(src), data: initialData });
               return;
           case 'terminal':
               title = 'Terminal';
@@ -338,6 +342,27 @@ const WorkspaceEnvironment: React.FC = () => {
               title = 'Notes'; 
               type = 'iframe'; 
               addNode(type, title, { iframeSrc: appendParams('/i/notes/index.html'), data: initialData });
+              return;
+          case 'photo-viewer':
+              title = 'Photo Viewer';
+              type = 'iframe';
+              let pvSrc = '/i/photo-viewer/index.html';
+              if (initialData?.file) pvSrc += `?file=${encodeURIComponent(initialData.file)}`;
+              addNode(type, title, { iframeSrc: appendParams(pvSrc), data: initialData });
+              return;
+          case 'image-studio':
+              title = 'Image Studio';
+              type = 'iframe';
+              let isSrc = '/i/image-studio/index.html';
+              if (initialData?.initialPath) isSrc += `?initialPath=${encodeURIComponent(initialData.initialPath)}`;
+              addNode(type, title, { iframeSrc: appendParams(isSrc), data: initialData });
+              return;
+          case 'url-tracer':
+              title = 'URL Tracer';
+              type = 'iframe';
+              let utSrc = '/i/url-tracer/index.html';
+              if (initialData?.initialUrl) utSrc += `?initialUrl=${encodeURIComponent(initialData.initialUrl)}`;
+              addNode(type, title, { iframeSrc: appendParams(utSrc), data: initialData });
               return;
           // ... Add other apps as needed
           default:
@@ -356,6 +381,18 @@ const WorkspaceEnvironment: React.FC = () => {
              }
       }
   }, [navigate, addNode, sessionId, workspaceId]);
+
+  // Listen for messages from plugins (iframes)
+  useEffect(() => {
+      const handleMessage = (e: MessageEvent) => {
+          if (e.data && e.data.type === 'OPEN_APP') {
+              const { appId, data } = e.data;
+              handleLaunchApp(appId, data);
+          }
+      };
+      window.addEventListener('message', handleMessage);
+      return () => window.removeEventListener('message', handleMessage);
+  }, [handleLaunchApp]);
 
   const handleNodeMove = (id: string, newX: number, newY: number) => {
     setNodes((prevNodes) => prevNodes.map((node) => (node.id === id ? { ...node, x: newX, y: newY } : node)));

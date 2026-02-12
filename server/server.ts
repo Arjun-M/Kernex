@@ -32,6 +32,9 @@ import docsRoutes from './api/docs.js';
 import authRoutes, { initAuth, authenticate } from './api/auth.js';
 import ftpRoutes from './api/ftp.js';
 import ftpClientRoutes from './api/ftpClient.js';
+import workspaceStateRoutes from './api/workspaceState.js';
+import extractorRoutes from './api/extractor.js';
+import urlTracerRoutes from './api/urlTracer.js';
 import { ftpManager } from './ftpServer.js';
 
 // Create custom logger stream
@@ -110,6 +113,9 @@ const registerProtected = async (instance: FastifyInstance) => {
   instance.register(utilsRoutes, { prefix: '/utils' });
   instance.register(dataUtilsRoutes, { prefix: '/data' });
   instance.register(workspaceRoutes, { prefix: '/workspaces' });
+  instance.register(workspaceStateRoutes, { prefix: '/workspace-state' });
+  instance.register(extractorRoutes, { prefix: '/extractor' });
+  instance.register(urlTracerRoutes, { prefix: '/url-tracer' });
   instance.register(ftpRoutes, { prefix: '/ftp' });
   instance.register(ftpClientRoutes, { prefix: '/ftp-client' });
 };

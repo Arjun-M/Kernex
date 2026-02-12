@@ -33,7 +33,7 @@ const REGISTRY: SearchResult[] = [
   // Canvas Tools - Development
   { id: 'tool-http', type: 'canvas', title: 'HTTP Tester', description: 'Send and inspect API requests', icon: 'zap', action: { kind: 'open_canvas', target: 'http-tester' } },
   { id: 'tool-terminal', type: 'canvas', title: 'Terminal', description: 'Host shell access', icon: 'terminal', action: { kind: 'open_canvas', target: 'terminal' } },
-  { id: 'tool-db', type: 'canvas', title: 'DB Viewer', description: 'Internal system database explorer', icon: 'database', action: { kind: 'open_canvas', target: 'db-viewer' } },
+  { id: 'tool-db', type: 'canvas', title: 'SQL Viewer', description: 'Internal SQLite database explorer', icon: 'database', action: { kind: 'open_canvas', target: 'db-viewer' } },
   { id: 'tool-files', type: 'canvas', title: 'File Manager', description: 'Manage server-side files', icon: 'folder', action: { kind: 'open_canvas', target: 'files' } },
   { id: 'tool-urls', type: 'canvas', title: 'Short URLs', description: 'Manage custom redirects', icon: 'link', action: { kind: 'open_canvas', target: 'short-urls' } },
 

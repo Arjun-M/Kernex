@@ -94,6 +94,47 @@ export default async function (fastify: FastifyInstance) {
     }
   });
 
+  // GET /api/files/scoped-tree
+  fastify.get('/scoped-tree', async (request, reply) => {
+    const { path: scopePath } = request.query as any;
+    if (!scopePath) return reply.code(400).send({ message: 'Scope path required' });
+
+    try {
+      const root = getWorkspaceRoot(request);
+      const targetDir = await resolvePath(root, scopePath);
+      
+      const stat = await fs.stat(targetDir);
+      if (!stat.isDirectory()) return reply.code(400).send({ message: 'Not a directory' });
+
+      // Build tree with paths relative to workspace root
+      const relativeRoot = scopePath.replace(/^\//, '');
+      const tree = await buildTree(root, targetDir, relativeRoot);
+      return tree;
+    } catch (e: any) {
+      return reply.code(500).send({ message: e.message });
+    }
+  });
+
+  // GET /api/files/stat
+  fastify.get('/stat', async (request, reply) => {
+    const { path: relativePath } = request.query as any;
+    if (!relativePath) return reply.code(400).send({ message: 'Path required' });
+
+    try {
+      const root = getWorkspaceRoot(request);
+      const fullPath = await resolvePath(root, relativePath);
+      const stat = await fs.stat(fullPath);
+      return {
+        size: stat.size,
+        modifiedAt: stat.mtime.toISOString(),
+        createdAt: stat.birthtime.toISOString(),
+        isDirectory: stat.isDirectory()
+      };
+    } catch (e: any) {
+      return reply.code(500).send({ message: e.message });
+    }
+  });
+
   // GET /api/files/read
   fastify.get('/read', async (request, reply) => {
     const { path: relativePath } = request.query as any;
@@ -127,12 +168,33 @@ export default async function (fastify: FastifyInstance) {
         '.gif': 'image/gif',
         '.svg': 'image/svg+xml',
         '.webp': 'image/webp',
+        '.bmp': 'image/bmp',
+        '.ico': 'image/x-icon',
+        '.avif': 'image/avif',
         '.pdf': 'application/pdf',
+        '.mp4': 'video/mp4',
+        '.webm': 'video/webm',
+        '.mov': 'video/quicktime',
+        '.m4v': 'video/x-m4v',
+        '.avi': 'video/x-msvideo',
+        '.mkv': 'video/x-matroska',
+        '.mp3': 'audio/mpeg',
+        '.wav': 'audio/wav',
+        '.ogg': 'audio/ogg',
+        '.m4a': 'audio/mp4',
+        '.aac': 'audio/aac',
+        '.flac': 'audio/flac',
         '.txt': 'text/plain',
         '.html': 'text/html',
         '.json': 'application/json',
+        '.xml': 'application/xml',
+        '.yaml': 'application/yaml',
+        '.yml': 'application/yaml',
         '.js': 'text/javascript',
-        '.css': 'text/css'
+        '.css': 'text/css',
+        '.md': 'text/markdown',
+        '.csv': 'text/csv',
+        '.sql': 'text/plain'
       };
       
       const type = mimeTypes[ext] || 'application/octet-stream';

@@ -1,8 +1,24 @@
 import type { FastifyInstance } from 'fastify';
 import db from '../db.js';
 import bcrypt from 'bcryptjs';
+import { ftpManager } from '../ftpServer.js';
 
 export default async function (fastify: FastifyInstance) {
+  // GET /api/ftp/status
+  fastify.get('/status', async (_request, _reply) => {
+    return ftpManager.getStatus();
+  });
+
+  // POST /api/ftp/restart
+  fastify.post('/restart', async (_request, reply) => {
+    try {
+      await ftpManager.restart();
+      return ftpManager.getStatus();
+    } catch (e: any) {
+      return reply.code(500).send({ message: e.message });
+    }
+  });
+
   // GET /api/ftp/accounts
   fastify.get('/accounts', async (_request, reply) => {
     try {

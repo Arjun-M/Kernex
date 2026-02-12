@@ -1,0 +1,210 @@
+.http-sidebar {
+  background: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.sidebar-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-tab {
+  flex: 1;
+  padding: 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-bottom: 2px solid transparent;
+  font-size: 0.9em;
+}
+
+.sidebar-tab.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+  background: var(--bg-primary);
+}
+
+.sidebar-search {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+}
+
+.sidebar-search input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-size: 0.9em;
+}
+
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.list-header {
+    padding: 10px;
+    font-size: 0.8em;
+    font-weight: bold;
+    color: var(--text-secondary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.list-header button {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.list-header button:hover {
+    background: var(--hover-bg);
+    color: var(--text-primary);
+}
+
+/* Collections */
+.collection-item {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.collection-header {
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.collection-header:hover {
+    background: var(--hover-bg);
+}
+
+.collection-header .icon {
+    display: flex;
+    align-items: center;
+    color: var(--text-secondary);
+}
+
+.collection-header .name {
+    flex: 1;
+    font-size: 0.95em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.delete-btn {
+    opacity: 0;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+}
+
+.collection-header:hover .delete-btn,
+.request-item:hover .delete-btn {
+    opacity: 1;
+}
+
+.delete-btn:hover {
+    color: #ff4d4d;
+}
+
+.collection-requests {
+    padding-left: 20px;
+    background: rgba(0,0,0,0.05);
+}
+
+.request-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    gap: 8px;
+    cursor: pointer;
+    border-left: 1px solid var(--border-color);
+}
+
+.request-item:hover {
+    background: var(--hover-bg);
+}
+
+.req-name {
+    font-size: 0.9em;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.empty-collection {
+    padding: 10px;
+    color: var(--text-secondary);
+    font-size: 0.8em;
+    font-style: italic;
+}
+
+/* History */
+.history-item {
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+}
+
+.history-item:hover {
+    background: var(--hover-bg);
+}
+
+.method {
+    font-size: 0.7em;
+    font-weight: bold;
+    padding: 2px 4px;
+    border-radius: 3px;
+    min-width: 45px;
+    text-align: center;
+}
+
+.method.get { color: #2ecc71; background: rgba(46, 204, 113, 0.1); }
+.method.post { color: #f1c40f; background: rgba(241, 196, 15, 0.1); }
+.method.put { color: #3498db; background: rgba(52, 152, 219, 0.1); }
+.method.delete { color: #e74c3c; background: rgba(231, 76, 60, 0.1); }
+.method.patch { color: #9b59b6; background: rgba(155, 89, 182, 0.1); }
+
+.url {
+    flex: 1;
+    font-size: 0.85em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    direction: rtl; /* Truncate start */
+    text-align: left;
+}
+
+.status {
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.status.success { color: #2ecc71; }
+.status.error { color: #e74c3c; }

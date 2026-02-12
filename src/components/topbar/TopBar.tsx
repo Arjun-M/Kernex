@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './TopBar.css';
 import { LogOut, Star, Save, Lock, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../app/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface TopBarProps {
   zoom: number;
@@ -21,6 +22,7 @@ const TopBar: React.FC<TopBarProps> = ({
   onSave
 }) => {
   const { logout } = useAuth();
+  const navigate = useNavigate();
   const [stars, setStars] = useState<number | null>(null);
 
   useEffect(() => {
@@ -34,7 +36,15 @@ const TopBar: React.FC<TopBarProps> = ({
     <div className="top-bar">
       <div className="top-bar-left">
         <div className="breadcrumb">
-            <span className="breadcrumb-segment">Personal</span>
+            <span 
+                className="breadcrumb-segment" 
+                onClick={() => navigate('/workspace')}
+                style={{ cursor: 'pointer', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-primary)'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
+            >
+                Personal
+            </span>
             <ChevronRight size={14} className="breadcrumb-separator" />
             <span className="breadcrumb-segment active">{workspaceName}</span>
             {isProtected && <Lock size={14} style={{ marginLeft: 8, color: 'var(--accent-primary)' }} />}

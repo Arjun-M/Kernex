@@ -1,0 +1,250 @@
+.env-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(2px);
+}
+
+.env-modal {
+    background: var(--bg-primary);
+    width: 800px;
+    height: 500px;
+    border-radius: 8px;
+    display: flex;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    overflow: hidden;
+}
+
+.env-sidebar {
+    width: 250px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+.env-sidebar-header {
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.env-sidebar-header h3 {
+    margin: 0;
+    font-size: 1em;
+    color: var(--text-primary);
+}
+
+.env-sidebar-header button {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.env-sidebar-header button:hover {
+    background: var(--hover-bg);
+    color: var(--primary-color);
+}
+
+.env-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.env-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid transparent;
+}
+
+.env-item:hover {
+    background: var(--hover-bg);
+}
+
+.env-item.active {
+    background: var(--bg-primary);
+    border-left: 3px solid var(--primary-color);
+    font-weight: bold;
+}
+
+.env-item .delete-btn {
+    opacity: 0;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.env-item:hover .delete-btn {
+    opacity: 1;
+}
+
+.env-item .delete-btn:hover {
+    color: #ff4d4d;
+}
+
+.env-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.env-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.env-header h2 {
+    margin: 0;
+    font-size: 1.2em;
+}
+
+.close-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.close-btn:hover {
+    color: var(--text-primary);
+}
+
+.env-editor {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+}
+
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.vars-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.vars-header label {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+}
+
+.add-var-btn {
+    background: transparent;
+    border: none;
+    color: var(--primary-color);
+    cursor: pointer;
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.vars-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.var-row {
+    display: flex;
+    gap: 10px;
+}
+
+.var-row input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.remove-var-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.remove-var-btn:hover {
+    color: #ff4d4d;
+}
+
+.empty-vars {
+    color: var(--text-secondary);
+    font-style: italic;
+    font-size: 0.9em;
+    text-align: center;
+    padding: 20px;
+    border: 1px dashed var(--border-color);
+    border-radius: 4px;
+}
+
+.env-actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.save-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+}
+
+.save-btn:hover {
+    filter: brightness(1.1);
+}
+
+.no-selection {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 1.1em;
+}

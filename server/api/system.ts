@@ -77,7 +77,49 @@ function parseChangelog(yaml: string, currentVersion: string, latestVersion: str
     return changelog;
 }
 
+function parseFullChangelog(yaml: string) {
+    const lines = yaml.split('\n');
+    const changelog: Record<string, { added: string[], fixed: string[], breaking: string[] }> = {};
+    
+    let currentVersion: string | null = null;
+    let currentSection: 'added' | 'fixed' | 'breaking' | null = null;
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        const versionMatch = trimmed.match(/^"?(\d+\.\d+\.\d+)"?:/);
+        if (versionMatch) {
+            currentVersion = versionMatch[1];
+            changelog[currentVersion] = { added: [], fixed: [], breaking: [] };
+            continue;
+        }
+
+        if (!currentVersion) continue;
+
+        if (trimmed.startsWith('added:')) currentSection = 'added';
+        else if (trimmed.startsWith('fixed:')) currentSection = 'fixed';
+        else if (trimmed.startsWith('breaking:')) currentSection = 'breaking';
+        else if (trimmed.startsWith('-') && currentSection) {
+            changelog[currentVersion][currentSection].push(trimmed.replace(/^- /, ''));
+        }
+    }
+    return changelog;
+}
+
 export default async function (fastify: FastifyInstance) {
+
+  // GET /api/system/changelog
+  fastify.get('/changelog', async () => {
+    try {
+        const changelogPath = path.join(process.cwd(), 'changelog.yml');
+        const yaml = fs.readFileSync(changelogPath, 'utf-8');
+        return parseFullChangelog(yaml);
+    } catch (e) {
+        console.error('Failed to read changelog', e);
+        return {};
+    }
+  });
   
   // GET /api/system/update-check
   fastify.get('/update-check', async () => {

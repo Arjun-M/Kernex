@@ -18,11 +18,16 @@ import SecurityPage from '../pages/system/SecurityPage';
 import SystemUpdatePage from '../pages/system/SystemUpdatePage';
 import ActivityLogPage from '../pages/system/ActivityLogPage';
 import NotFoundPage from '../pages/NotFoundPage';
+import KernexPage from '../pages/KernexPage';
 
 export const routes = [
   {
     path: '/',
     element: <Navigate to="/setup" replace />,
+  },
+  {
+    path: '/kernex',
+    element: <KernexPage />,
   },
   {
     path: '/setup',

@@ -1,8 +1,27 @@
+0.1.3:
+  added:
+    - New plugins: URL Tracer, Website Extractor, Photo Viewer, and Image Studio
+    - Advanced Image Studio workflow (EXIF readout, conversion, quality controls, resize, watermarking, export/download)
+    - Workspace plugin state persistence API (`/api/workspace-state/*`) and shared `usePluginState` hook usage across plugins
+    - Documentation expansion with full manual, feature overview, architecture/API references, and onboarding-oriented docs structure
+    - Docs navigation improvements with canonical `/docs/*` routes, markdown link normalization, and page-to-page next/back navigation
+    - File metadata API endpoint (`GET /api/files/stat`) for richer plugin metadata and tooling support
+  changed:
+    - Renamed DB Viewer to SQL Viewer across UI and documentation
+    - Plugin drawer expanded with media and URL-routing tool categories
+    - File Manager upgraded to typed previews (image/svg/video/audio/pdf), safer non-text handling, and richer file workflows
+    - SQL Viewer UX and layout behavior improved for small-width screens
+  fixed:
+    - URL Tracer now reports detailed redirect hops including Location headers, resolved destinations, timing, loop detection, and client-side redirect hints
+    - Docs links no longer depend on `.md` suffixes and now redirect to canonical slugs
+    - Multiple plugin and docs page responsiveness/layout issues across small screen sizes
+
 0.1.2:
   fixed:
     - CRITICAL: Enforced KERNEX_ENCRYPTION_KEY requirement in production environment
     - Security: Redacted sensitive authentication tokens from terminal connection logs
     - Build: Added TypeScript type checking for server-side code
+    
 0.1.1:
   added:
     - Documentation system at /docs with markdown rendering

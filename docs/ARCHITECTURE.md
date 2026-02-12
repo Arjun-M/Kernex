@@ -1,52 +1,50 @@
-# Architecture Overview
+# Architecture
 
-This document explains the internal design of Kernex for contributors and curious developers.
+## High-Level Stack
+- Frontend: React + TypeScript + Vite
+- Backend: Fastify + TypeScript
+- DB: better-sqlite3 (system + per-workspace)
+- Realtime: websocket endpoints for terminal/log streams
 
-## Tech Stack
+## Server Composition
+`server/server.ts` registers:
+- auth routes (`/api/auth`)
+- public short URL routes
+- docs routes (`/api/docs`)
+- protected API groups under `/api` (canvas/files/workspaces/tools/system/etc)
+- plugin static routes under `/i/*` via iframe routes
 
-| Component | Technology | Reason |
-| :--- | :--- | :--- |
-| **Backend** | Fastify | Faster than Express, better schema validation. |
-| **Database** | SQLite (`better-sqlite3`) | Synchronous, embedded, zero-latency queries. |
-| **Frontend** | React 18 | Component-based UI. |
-| **Build** | Vite | Instant HMR, fast builds. |
+## Data Boundaries
+- Global state:
+  - settings
+  - auth/session
+  - logs
+  - short URLs
+  - FTP account metadata
+- Workspace state:
+  - files
+  - workspace db
+  - plugin state
+  - canvas composition
 
----
+## Frontend Structure
+- App shell/routes: `src/app`, `src/pages`
+- Canvas runtime: `src/canvas`
+- Plugin host drawer: `src/components/drawer/PluginDrawer.tsx`
+- Plugins: `src/plugins/*`
 
-## Directory Structure
+## Plugin Runtime Model
+Each plugin is loaded in an iframe from `/i/<plugin>/index.html`.
+Plugin API requests use auth/session propagation via `pluginFetch` helper.
 
-```
-/
-├── server/
-│   ├── server.ts         # Entry point
-│   ├── db.ts             # Database connection & schema
-│   ├── iframeRoutes.ts   # Plugin static serving
-│   └── api/              # REST Endpoints
-│       ├── auth.ts
-│       ├── system.ts
-│       └── ...
-├── src/
-│   ├── app/              # React Contexts (Auth, Settings)
-│   ├── canvas/           # The Node system logic
-│   ├── components/       # UI Library
-│   └── plugins/          # Built-in React plugins
-└── workspace/            # User data storage
-```
+## Security Controls (Code-Level)
+- auth pre-handler around protected APIs
+- path resolution + traversal checks in file APIs
+- workspace ID validation
+- encrypted secret handling
 
----
-
-## Core Concepts
-
-### 1. The "Dual-Mode" Plugin System
-Kernex supports two types of "Apps":
-1.  **React Components:** Tightly integrated, fast, share memory with the main app. (e.g., Settings Page).
-2.  **Iframe Plugins:** Isolated, secure, can be written in any stack. (e.g., Terminal, 3rd party tools).
-
-### 2. The File System Abstraction
-The backend exposes `server/api/files.ts` which acts as a restricted gateway to the OS file system.
-*   It ensures operations are confined to `workspace/`.
-*   It handles path sanitization to prevent directory traversal (`../../`).
-
-### 3. Real-time Communication
-*   **WebSockets:** Used by the Terminal (`/api/term/ws`) and Logs Viewer (`/api/logs/ws`).
-*   **Polling:** Used by the Canvas to auto-save every 60s.
+## Extensibility
+- add API route module under `server/api/`
+- register route in `server/server.ts`
+- add plugin UI entry under `src/plugins/`
+- register plugin metadata in Plugin Drawer

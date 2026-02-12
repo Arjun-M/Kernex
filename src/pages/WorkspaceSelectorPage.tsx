@@ -7,7 +7,7 @@ import {
   Plus, Trash2, Settings, Shield, Clock, Home,
   ChevronDown, FileText, HelpCircle,
   Github, Lock, Unlock, Eye, EyeOff, X, Upload,
-  Package
+  Package, Loader2
 } from 'lucide-react';
 import '../canvas/Node.css';
 import './WorkspaceSelector.css';
@@ -34,6 +34,7 @@ const WorkspaceSelectorPage: React.FC = () => {
   const [isPasswordProtected, setIsPasswordProtected] = useState(false);
   const [workspacePassword, setWorkspacePassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   // Delete Modal State
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -57,24 +58,67 @@ const WorkspaceSelectorPage: React.FC = () => {
     }
   };
 
+  const MAX_WORKSPACE_NAME = 40;
+  const MAX_WORKSPACE_DESC = 140;
+  const MIN_PASSWORD_LENGTH = 6;
+
+  const trimmedWorkspaceName = newWorkspaceName.trim();
+  const trimmedWorkspacePassword = workspacePassword.trim();
+  const trimmedWorkspaceDescription = newWorkspaceDesc.trim();
+
+  const nameError =
+    trimmedWorkspaceName.length === 0
+      ? 'Workspace name is required.'
+      : trimmedWorkspaceName.length < 3
+        ? 'Use at least 3 characters.'
+        : undefined;
+
+  const passwordError =
+    isPasswordProtected && trimmedWorkspacePassword.length > 0 && trimmedWorkspacePassword.length < MIN_PASSWORD_LENGTH
+      ? `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`
+      : undefined;
+
+  const canCreateWorkspace =
+    !isCreating &&
+    !nameError &&
+    (!isPasswordProtected || (!!trimmedWorkspacePassword && !passwordError));
+
   useEffect(() => {
     fetchWorkspaces();
   }, []);
 
+  useEffect(() => {
+    if (!showCreateOverlay) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') resetCreateForm();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showCreateOverlay]);
+
   const handleCreateSubmit = async () => {
-    if (newWorkspaceName) {
-      try {
-        await workspaceApi.create(
-            newWorkspaceName, 
-            newWorkspaceDesc, 
-            selectedIcon,
-            isPasswordProtected ? workspacePassword : undefined
-        );
-        fetchWorkspaces();
-        resetCreateForm();
-      } catch (err) {
-        error('Failed to create workspace');
-      }
+    if (!canCreateWorkspace) {
+      if (nameError) error(nameError);
+      if (!nameError && passwordError) error(passwordError);
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      await workspaceApi.create(
+          trimmedWorkspaceName, 
+          trimmedWorkspaceDescription, 
+          selectedIcon,
+          isPasswordProtected ? trimmedWorkspacePassword : undefined
+      );
+      await fetchWorkspaces();
+      resetCreateForm();
+    } catch {
+      error('Failed to create workspace');
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -87,6 +131,7 @@ const WorkspaceSelectorPage: React.FC = () => {
     setIsPasswordProtected(false);
     setWorkspacePassword('');
     setShowPassword(false);
+    setIsCreating(false);
   };
 
   const handleDeleteConfirm = async () => {
@@ -96,7 +141,7 @@ const WorkspaceSelectorPage: React.FC = () => {
         fetchWorkspaces();
         setShowDeleteModal(false);
         setWorkspaceToDelete(null);
-      } catch (err) {
+      } catch {
         error('Failed to delete workspace');
       }
     }
@@ -299,145 +344,6 @@ const WorkspaceSelectorPage: React.FC = () => {
             </div>
         )}
 
-        {/* Create Overlay */}
-        {showCreateOverlay && (
-            <div className="create-overlay">
-                <button className="overlay-close-btn" onClick={resetCreateForm}>
-                    <X size={24} />
-                </button>
-                
-                <div className="overlay-content">
-                    {createStep === 'select' ? (
-                        <>
-                            <h2 className="overlay-title">Create New Space</h2>
-                            <div className="overlay-cards-container">
-                                <div className="overlay-option-card" onClick={() => setCreateStep('form')}>
-                                    <div className="option-icon-box">
-                                        <FileText size={32} />
-                                    </div>
-                                    <div className="option-text">
-                                        <h3>Start from scratch</h3>
-                                        <p>Create a clean, empty workspace.</p>
-                                    </div>
-                                </div>
-                                <div className="overlay-option-card disabled">
-                                    <div className="option-icon-box">
-                                        <Upload size={32} />
-                                    </div>
-                                    <div className="option-text">
-                                        <h3>Import from file</h3>
-                                        <p>Restore from a backup (Coming soon)</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="overlay-form-container">
-                             <div className="form-header">
-                                 <h2>Configure Workspace</h2>
-                                 <p>Set up your new environment details.</p>
-                             </div>
-                             
-                             <div className="form-group">
-                                <label className="form-label">Icon & Identity</label>
-                                <div className="icon-preview-wrapper-horizontal">
-                                    <div className="selected-icon-preview">
-                                        {getIcon(selectedIcon, 24)}
-                                    </div>
-                                    <div className="icon-scroll-container">
-                                        <IconPicker 
-                                            selectedIcon={selectedIcon} 
-                                            onSelect={setSelectedIcon} 
-                                            mode="horizontal"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="form-group">
-                                <label className="form-label">Workspace Name</label>
-                                <div className="modern-input-wrapper">
-                                    <input 
-                                        type="text" 
-                                        className="modern-input"
-                                        value={newWorkspaceName} 
-                                        onChange={(e) => setNewWorkspaceName(e.target.value)}
-                                        placeholder="e.g. Project Alpha"
-                                        onKeyDown={(e) => e.key === 'Enter' && handleCreateSubmit()}
-                                        autoFocus
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="form-group">
-                                <label className="form-label">Description <span className="optional-badge">Optional</span></label>
-                                <div className="modern-input-wrapper">
-                                    <input 
-                                        type="text" 
-                                        className="modern-input"
-                                        value={newWorkspaceDesc} 
-                                        onChange={(e) => setNewWorkspaceDesc(e.target.value)}
-                                        placeholder="Briefly describe your project..."
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="form-divider" />
-
-                            <div className="form-group">
-                                <div 
-                                    className={`checkbox-card ${isPasswordProtected ? 'active' : ''}`}
-                                    onClick={() => setIsPasswordProtected(!isPasswordProtected)}
-                                >
-                                    <div className="checkbox-icon">
-                                        {isPasswordProtected ? <Lock size={20} /> : <Unlock size={20} />}
-                                    </div>
-                                    <div className="checkbox-content">
-                                        <span className="checkbox-title">Password Protection</span>
-                                        <span className="checkbox-desc">Restrict access to this workspace</span>
-                                    </div>
-                                    <div className={`checkbox-toggle ${isPasswordProtected ? 'checked' : ''}`}></div>
-                                </div>
-                            </div>
-
-                            {isPasswordProtected && (
-                                <div className="form-group slide-down">
-                                    <label className="form-label">Access Password</label>
-                                    <div className="modern-input-wrapper">
-                                        <input 
-                                            type={showPassword ? "text" : "password"}
-                                            className="modern-input"
-                                            value={workspacePassword} 
-                                            onChange={(e) => setWorkspacePassword(e.target.value)}
-                                            placeholder="Enter a secure password..."
-                                        />
-                                         <button 
-                                            className="password-toggle-btn"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            tabIndex={-1}
-                                        >
-                                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                            
-                            <div className="form-actions">
-                                <button className="btn-text" onClick={() => setCreateStep('select')}>Back</button>
-                                <button 
-                                    className="btn-primary btn-large" 
-                                    onClick={handleCreateSubmit} 
-                                    disabled={!newWorkspaceName || (isPasswordProtected && !workspacePassword)}
-                                >
-                                    Create Workspace
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-        )}
-
         {/* Password Prompt Modal */}
         <Modal
             isOpen={showPasswordPrompt}
@@ -503,9 +409,185 @@ const WorkspaceSelectorPage: React.FC = () => {
         </Modal>
 
       </div>
+
+      {/* Create Overlay */}
+      {showCreateOverlay && (
+          <div className="create-overlay" onClick={resetCreateForm}>
+              <button className="overlay-close-btn" onClick={resetCreateForm}>
+                  <X size={24} />
+              </button>
+              
+              <div className="overlay-content" onClick={(e) => e.stopPropagation()}>
+                  {createStep === 'select' ? (
+                      <>
+                          <h2 className="overlay-title">Create New Space</h2>
+                          <div className="overlay-cards-container">
+                              <div className="overlay-option-card" onClick={() => setCreateStep('form')}>
+                                  <div className="option-icon-box">
+                                      <FileText size={32} />
+                                  </div>
+                                  <div className="option-text">
+                                      <h3>Start from scratch</h3>
+                                      <p>Create a clean, empty workspace.</p>
+                                  </div>
+                              </div>
+                              <div className="overlay-option-card disabled">
+                                  <div className="option-icon-box">
+                                      <Upload size={32} />
+                                  </div>
+                                  <div className="option-text">
+                                      <h3>Import from file</h3>
+                                      <p>Restore from a backup (Coming soon)</p>
+                                  </div>
+                              </div>
+                          </div>
+                      </>
+                  ) : (
+                      <div className="overlay-form-container">
+                          <div className="workspace-form-shell">
+                              <div className="workspace-live-preview">
+                                  <div className="workspace-live-preview__head">Live Preview</div>
+                                  <div className="workspace-live-preview__card">
+                                      <div className="workspace-live-preview__icon">
+                                          {isPasswordProtected ? <Lock size={28} /> : getIcon(selectedIcon, 28)}
+                                      </div>
+                                      <h3>{trimmedWorkspaceName || 'Untitled Workspace'}</h3>
+                                      <p>{trimmedWorkspaceDescription || 'Add a short description so this workspace is easier to scan later.'}</p>
+                                      <div className="workspace-live-preview__meta">
+                                          <span>{isPasswordProtected ? 'Protected' : 'Open Access'}</span>
+                                          <span>{selectedIcon}</span>
+                                      </div>
+                                  </div>
+                              </div>
+
+                              <div className="workspace-form-panel">
+                                  <div className="form-header">
+                                      <h2>Configure Workspace</h2>
+                                      <p>Set up your new environment details.</p>
+                                  </div>
+
+                                  <div className="form-group">
+                                      <div className="form-row">
+                                          <label className="form-label">Workspace Name</label>
+                                          <span className="field-counter">{newWorkspaceName.length}/{MAX_WORKSPACE_NAME}</span>
+                                      </div>
+                                      <div className="modern-input-wrapper">
+                                          <input
+                                              type="text"
+                                              className={`modern-input ${nameError ? 'input-error' : ''}`}
+                                              value={newWorkspaceName}
+                                              onChange={(e) => setNewWorkspaceName(e.target.value)}
+                                              placeholder="e.g. Project Alpha"
+                                              onKeyDown={(e) => e.key === 'Enter' && handleCreateSubmit()}
+                                              maxLength={MAX_WORKSPACE_NAME}
+                                              autoFocus
+                                          />
+                                      </div>
+                                      {nameError && <div className="field-error">{nameError}</div>}
+                                  </div>
+
+                                  <div className="form-group">
+                                      <div className="form-row">
+                                          <label className="form-label">Description</label>
+                                          <span className="field-counter">{newWorkspaceDesc.length}/{MAX_WORKSPACE_DESC}</span>
+                                      </div>
+                                      <div className="modern-input-wrapper">
+                                          <textarea
+                                              className="modern-input modern-textarea"
+                                              value={newWorkspaceDesc}
+                                              onChange={(e) => setNewWorkspaceDesc(e.target.value)}
+                                              placeholder="What will you use this workspace for?"
+                                              maxLength={MAX_WORKSPACE_DESC}
+                                              rows={3}
+                                          />
+                                      </div>
+                                  </div>
+
+                                  <div className="form-group">
+                                      <label className="form-label">Icon</label>
+                                      <div className="icon-preview-wrapper-horizontal">
+                                          <div className="selected-icon-preview">
+                                              {getIcon(selectedIcon, 24)}
+                                          </div>
+                                          <div className="icon-scroll-container">
+                                              <IconPicker
+                                                  selectedIcon={selectedIcon}
+                                                  onSelect={setSelectedIcon}
+                                                  mode="horizontal"
+                                              />
+                                          </div>
+                                      </div>
+                                  </div>
+
+                                  <div className="form-divider" />
+
+                                  <div className="form-group">
+                                      <div
+                                          className={`checkbox-card ${isPasswordProtected ? 'active' : ''}`}
+                                          onClick={() => setIsPasswordProtected(!isPasswordProtected)}
+                                      >
+                                          <div className="checkbox-icon">
+                                              {isPasswordProtected ? <Lock size={20} /> : <Unlock size={20} />}
+                                          </div>
+                                          <div className="checkbox-content">
+                                              <span className="checkbox-title">Password Protection</span>
+                                              <span className="checkbox-desc">Require password before opening this workspace</span>
+                                          </div>
+                                          <div className={`checkbox-toggle ${isPasswordProtected ? 'checked' : ''}`}></div>
+                                      </div>
+                                  </div>
+
+                                  {isPasswordProtected && (
+                                      <div className="form-group slide-down">
+                                          <label className="form-label">Access Password</label>
+                                          <div className="modern-input-wrapper">
+                                              <input
+                                                  type={showPassword ? "text" : "password"}
+                                                  className={`modern-input ${passwordError ? 'input-error' : ''}`}
+                                                  value={workspacePassword}
+                                                  onChange={(e) => setWorkspacePassword(e.target.value)}
+                                                  placeholder="Enter a secure password..."
+                                                  onKeyDown={(e) => e.key === 'Enter' && handleCreateSubmit()}
+                                              />
+                                              <button
+                                                  className="password-toggle-btn"
+                                                  onClick={() => setShowPassword(!showPassword)}
+                                                  tabIndex={-1}
+                                                  type="button"
+                                              >
+                                                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                              </button>
+                                          </div>
+                                          <div className={`field-hint ${passwordError ? 'field-error' : ''}`}>
+                                              {passwordError || `Use at least ${MIN_PASSWORD_LENGTH} characters.`}
+                                          </div>
+                                      </div>
+                                  )}
+
+                                  <div className="form-actions">
+                                      <button className="btn-text" onClick={() => setCreateStep('select')} disabled={isCreating}>Back</button>
+                                      <button
+                                          className="btn-primary btn-large"
+                                          onClick={handleCreateSubmit}
+                                          disabled={!canCreateWorkspace}
+                                      >
+                                          {isCreating ? (
+                                              <>
+                                                  <Loader2 size={16} className="spin" style={{ marginRight: 8 }} />
+                                                  Creating...
+                                              </>
+                                          ) : 'Create Workspace'}
+                                      </button>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  )}
+              </div>
+          </div>
+      )}
     </div>
   );
 };
 
 export default WorkspaceSelectorPage;
-
